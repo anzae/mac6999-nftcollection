@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.1;
 // Primeiro importamos alguns contratos do OpenZeppelin.
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
+
+// Precisamos importar essa funcao de base64 que acabamos de criar
+import { Base64 } from "./libraries/Base64.sol";
 
 // Nós herdamos o contrato que importamos. Isso significa que
 // teremos acesso aos métodos do contrato herdado.
@@ -13,24 +17,90 @@ contract MyEpicNFT is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
+    // variavel baseSvg aqui que todos os nossos NFTs vao usar
+    string baseSvg = "<svg version='1.0' xmlns='http://www.w3.org/2000/svg' width='344' height='285.333' viewBox='0 0 258 214'><path d='M186 15.1c-1.4.5-3.6 2-4.9 3.2-3.7 3.4-10 13.6-11.2 18.1-.6 2.3-2 6.3-3.2 8.9-1.9 4.7-2.2 4.8-5.1 4.2-1.7-.4-7.9-.9-13.8-1.2-14.6-.7-24.7 2.3-33.2 9.7-1.8 1.7-3.6 3-3.9 3-.2 0-1-2.1-1.7-4.6-1.3-4.5-7.7-14.2-11.6-17.5-4.2-3.6-22.2-12-28.1-13.1-7.2-1.3-11.4-.4-18.1 3.9-3.6 2.3-5.2 4.5-9.3 12.8C35.7 55 33 65.6 33 76.9c0 9.1 1.9 21.9 4.3 28.8 3.5 10.1 11.5 19.9 19 23.4 5.6 2.5 16 2.6 20.9.1l3.5-1.9.7 8.9c1.1 14.3 6.4 32.7 11.9 41.5 1.3 2.1 4.7 6.4 7.6 9.5 6.4 7 12.8 10 23.1 10.6 6.5.4 8.3.1 13.3-2.2 6.5-2.8 13.7-8.1 13.6-9.9 0-.7-2.3-2.7-5.2-4.6-4.6-3.1-6-3.4-12.2-3.5-3.8-.1-8 .3-9.2.7-2 .7-2.5.2-5.2-5.1-3.4-6.7-4.8-13.8-4.1-20l.5-4.3 5.8 4c9.5 6.7 14.8 8.8 26.2 10.4 1.8.2 2 .9 1.7 6.8-.5 8.5.4 9.3 8.4 7.8 10.4-1.8 9.8-1 9.1-10.3l-.5-8.1 2.5 5.2c1.3 2.9 2.8 5.3 3.3 5.3s2.6-1.1 4.6-2.5 4.3-2.5 5-2.5c2.3 0 1.6-3.4-1.7-7.8-2.9-4-3-4.2-.9-4.2 2.5 0 8-5.1 8-7.4 0-1.3.6-1.5 2.8-.9 4.9 1.2 6.7.9 6.7-1.2 0-1.5-1-2.2-4.2-2.9-2.4-.5-4.3-1.3-4.3-1.7 0-.5 1.8-1.4 4.1-2 4.3-1.3 5.9-3.3 4.1-5.1-1-1-1.7-.9-8.7 1.7-1.1.5.1-.9 2.8-3 4.6-3.7 6.2-7.5 3.1-7.5-1.4 0-8.5 4.7-9.2 6.1-.1.3-2.5.4-5.2.1-2.8-.2-7 .1-9.5.8-8.8 2.5-15.5-.9-25-12.6-6-7.4-8.1-8.7-9.1-5.9-.8 1.9 3 7 11.1 15.1 4.9 5 5.8 6.4 4.6 7.1-2.7 1.7-.4 4.1 5.4 5.4 5.6 1.3 5.7 1.3 3 2.6-1.6.9-2.5 2.1-2.3 3.1.4 1.8 1.9 2 5.3.7 1.9-.8 1.8-.6-.2 1.7-1.3 1.3-2.3 2.9-2.3 3.5 0 2.3 3.1 2.1 5.9-.2 3.8-3.3 5.1-3.2 2 .1-4.2 4.4-11.8 7.4-19.1 7.4-8.8 0-14.9-2.1-23.8-8-11.8-7.9-15-6.7-15 6 0 7.2 2.8 16.4 6.9 22.9 4.1 6.4 5.8 7.8 12.6 10.6l5.6 2.3-3.2 1.1c-4.5 1.6-7.8 1.4-15.1-.9-5.5-1.7-7.4-2.9-12.5-8.3-6.5-6.8-9.8-12.5-13.1-22.7-5.4-16.8-6.8-33.9-3.2-39.8 1.1-1.8 2-3.9 2-4.7s.8-3 1.7-5c1.3-2.6 1.4-3.8.5-4.7-1.7-1.7-3.8.5-7.3 7.8-2.5 5.4-3.8 6.9-8.2 9.4-8.8 5.1-17.2 3.6-25.3-4.5-9.1-9-13.4-22.4-13.4-41.3 0-12.9 1.2-18.5 6.9-31.2 4.2-9.5 5.1-10.8 9.6-13.9 4.7-3.1 5.4-3.3 11.5-2.9 5.5.4 8.4 1.4 17.6 6.1 12.7 6.5 16.7 10.8 21.3 22.9 3.5 9.1 5 9.5 11.8 3.4 10.7-9.6 26-12.8 41.8-8.7 3.8 1 7.5 1.7 8 1.4 1.1-.4 7.5-14.3 7.5-16.3 0-2.7 6.2-13 9.9-16.3 4.5-4.1 8.9-5.2 16.3-4.3 7.6 1 11.3 2.9 16.8 8.6 8.2 8.5 9.8 17.8 6 37.2-4.2 21.7-7.8 31-13 34.1-3.6 2.2-7.5 2.1-12.7-.2-3.5-1.6-4.4-1.7-5.3-.6-.8 1-.6 1.8 1.1 3.4 2.8 2.6 7.4 3.5 14.2 2.8 4.5-.4 5.6-1 8.8-4.6 6.3-7.1 12.8-32.2 13.1-50.9.2-11.8-1.8-17.2-9-24.5-7.2-7.4-11-9-22.2-9.4-5.2-.2-10.6.2-12 .8zm-3.8 123.5c.7 8.8-3.7 12.1-8.6 6.4-1.8-2.2-2.6-4.3-2.6-7.1V134h10.8l.4 4.6zm-7.4 19c2.2 3.4 2.3 3.6.5 4.9-1 .8-2.1 1.1-2.4.7-1.2-1.3-2.9-7.4-2.3-8.3.9-1.6 1.8-1 4.2 2.7zm-12.8 9.3c.4 3.3.2 5.4-.5 5.6-.5.2-2.5.6-4.2.9l-3.3.5v-4.7c0-5.4.7-6.8 3.5-7.5 3.4-.8 4-.2 4.5 5.2zM141.1 184l2.4 1.9-5.1.1c-5.4 0-11.4-1.6-11.4-3.1 0-.5 2.7-.9 5.9-.9 4.4 0 6.5.5 8.2 2z'/><path d='M194.2 33c-6.8 2.8-13.7 11.4-13 16.3.5 3.7 4.1 2.8 4.9-1.1 1.7-8.5 14.2-14.7 17.9-9 2 3.1 2.6 22.6 1 30.4l-1.3 5.9-1.2-5c-1.2-5.6-6.3-15.1-9.4-17.9-2.3-2-5.1-1.5-5.1.9 0 .9 1.1 2.6 2.4 3.8 4.5 4 7.5 11.5 8.3 20.7.9 9.7 2.2 10.8 6 5.1 4.4-6.4 5.8-13.4 5.7-28.1 0-14-.5-16.1-4.7-20.8-2.2-2.4-7.2-2.9-11.5-1.2zm-124 12c-3 2.1-5.1 4.9-7.6 10.2-6.8 14.4-7.8 21.9-6.2 45.8.8 11.8 2 16 4.6 16 1.4 0 1.8-1.3 2.3-7.8.6-8 5.4-24.5 8.4-29.1 2.8-4.4 13.7-15.3 16.1-16.2 1.7-.6 2.2-1.6 2-3.1-.6-4.5-3.6-3.2-12.3 5.6-8.9 9-11.1 12.5-14.1 21.9-2.2 7.1-3.4 5.8-3.4-3.8C60 69 69.5 47 76.3 47c3.8 0 12.7 6.4 15.8 11.3 1.6 2.7 3.5 4.7 4.2 4.4 4.8-1.6-2.7-12.5-12-17.5-3.4-1.8-7-3.2-8-3.2-1.1 0-3.8 1.3-6.1 3zm105.5 24.7c-.8 1.6-1.9 4.4-2.6 6.3-.6 1.9-3.8 6.5-7.1 10.2-4.6 5.1-7.3 7.1-11.3 8.6-3.4 1.3-5.2 2.5-5.1 3.6 0 .9.1 5.2.2 9.6.2 6.3.6 8.4 2.1 9.9 2.5 2.5 9.8 3.5 15.6 2 8.9-2.3 10.5-9.4 5.3-24.4l-2.5-7 2.9-3.5c3.4-4.1 7.9-14.6 7.1-16.6-.8-2.3-3.1-1.6-4.6 1.3zm-5 37.2c.6 6-.1 7.2-4.4 8.5-2.3.7-2.3.6-2.3-7.9 0-7-.3-8.7-1.7-9.2s-1.2-1 1.3-3l2.9-2.3 1.9 4.2c1 2.3 2 6.7 2.3 9.7zm-13.2-3.2c0 2.7.4 6.5.8 8.5.9 4.1-.1 4.9-2.8 2.1-1.4-1.3-1.5-2.7-1-7.7.4-3.4.9-6.4 1.2-6.9 1.1-1.8 1.8-.3 1.8 4zm-56.1-26.5c-.4.6-.1 1.6.7 2.3.8.6 3.6 3.4 6.2 6.2l4.9 5-1.5 4.5c-.9 2.4-1.8 9.6-2.2 15.9l-.8 11.6 2.9 2.2c2.4 1.9 3.7 2.2 7.3 1.7 6.4-.9 11.2-3.6 13.3-7.6 1.6-2.8 1.8-4.8 1.4-10.3-.6-6.1-.5-6.7 1.3-6.7 2.3 0 3.5-2.5 1.8-3.8-.7-.5-3.2-1.2-5.6-1.6-6.5-1-8.8-2.6-17.5-12-7.6-8.2-10.6-10-12.2-7.4zm27.4 32.1c.2 4.7 0 7.7-.7 8.1-.7.5-1.1-1-1.1-4.6 0-2.9-.3-6.3-.6-7.6-.7-2.4-3.3-2.9-5.2-1-1.6 1.6-1.5 10.7.2 14 1.6 3.1.7 3.8-4.6 3.8h-3.1l.6-11.3c.9-16.6.6-16.1 8-12.1l6.1 3.2.4 7.5z'/><rect width='90%' height='30' x='5%' y='20%' fill='#fff'/><rect width='100%' height='100%' style='fill-opacity:0;stroke:#000;stroke-width:10' /><text x='50%' y='28%' class='prefix__base' dominant-baseline='middle' text-anchor='middle'>";
+
+    //  tres listas, cada uma com seu grupo de palavras aleatorias
+    string[] firstWords = ["GALINHA", "CACHORRO", "TATU", "BUFALO", "AVESTRUZ", "CISNE", "HIPOPOTAMO", "VACA", "CAVALO", "POMBA","PATO", "CARACOL", "ESQUILO", "PEIXE", "LOBO","GATO", "BALEIA", "CANGURU", "GORILA", "BORBOLETA"];
+    string[] secondWords = ["LARANJA", "BRANCO", "AMARELO", "VERDE", "ROSA", "ROXO", "AZUL", "PRETO", "MARROM", "CINZA", "VERMELHO", "LILAS", "TURQUESA", "MARFIM", "PRATEADO", "DOURADO", "BEGE"];
+    string[] thirdWords = ["MOTORISTA", "ENGENHEIRO", "PROFESSOR", "ATOR", "ADVOGADO", "CARTEIRO", "MECANICO", "ESTUDANTE", "YOUTUBER", "AGRICULTOR", "GARCOM", "VENDEDOR", "DESENHISTA", "REPORTER", "CIENTISTA", "ENFERMEIRO", "ATLETA", "BOMBEIRO", "POLICIAL", "PILOTO"];
+
+    event NewEpicNFTMinted(address sender, uint256 tokenId);
+    
     // Nós precisamos passar o nome do nosso token NFT e o símbolo dele.
-    constructor() ERC721 ("SquareNFT", "SQUARE"){
+    constructor() ERC721 ("RataoNFT", "SQUARE"){
       console.log("Esse eh meu contrato de NFT! Tchu-hu");
     }
+
+    function pickRandomFirstWord(uint256 tokenId) public view returns (string memory) {
+      // Crio a 'semente' para o gerador aleatorio
+      uint256 rand = random(string(abi.encodePacked("PRIMEIRA_PALAVRA", Strings.toString(tokenId))));
+      // pego o numero no maximo ate o tamanho da lista, para nao dar erro de indice.
+      rand = rand % firstWords.length;
+      return firstWords[rand];
+    }
+
+    function pickRandomSecondWord(uint256 tokenId) public view returns (string memory) {
+      uint256 rand = random(string(abi.encodePacked("SEGUNDA_PALAVRA", Strings.toString(tokenId))));
+      rand = rand % secondWords.length;
+      return secondWords[rand];
+    }
+
+    function pickRandomThirdWord(uint256 tokenId) public view returns (string memory) {
+      uint256 rand = random(string(abi.encodePacked("TERCEIRA_PALAVRA", Strings.toString(tokenId))));
+      rand = rand % thirdWords.length;
+      return thirdWords[rand];
+    }
+
+    function random(string memory input) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(input)));
+    }
+
     // Uma função que o nosso usuário irá chamar para pegar sua NFT.
     function makeAnEpicNFT() public {
 
-        // Pega o tokenId atual, que começa por 0.
-        uint256 newItemId = _tokenIds.current();
+      // Pega o tokenId atual, que começa por 0.
+      uint256 newItemId = _tokenIds.current();
 
-        // Minta ("cunha") o NFT para o sender (quem ativa o contrato) usando msg.sender.
-        _safeMint(msg.sender, newItemId);
+      string memory first = pickRandomFirstWord(newItemId);
+      string memory second = pickRandomSecondWord(newItemId);
+      string memory third = pickRandomThirdWord(newItemId);
+      string memory combinedWord = string(abi.encodePacked(first, " ", second, " ", third));
 
-        // Designa os dados do NFT.
-        _setTokenURI(newItemId, "data:application/json;base64,ewogICJuYW1lIjogIlJhdGFvIiwKICAiZGVzY3JpcHRpb24iOiAiVW0gTkZUIHN1cGVyIGZhbW9zbyBkZSB1bSByYXRhbyBwYSIsCiAgImltYWdlIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlIWmxjbk5wYjI0OUlqRXVNQ0lnZG1sbGQwSnZlRDBpTUNBd0lESTFPQ0F5TVRRaVBqeHdZWFJvSUdROUlrMHhPRFlnTVRVdU1XTXRNUzQwTGpVdE15NDJJREl0TkM0NUlETXVNaTB6TGpjZ015NDBMVEV3SURFekxqWXRNVEV1TWlBeE9DNHhMUzQySURJdU15MHlJRFl1TXkwekxqSWdPQzQ1TFRFdU9TQTBMamN0TWk0eUlEUXVPQzAxTGpFZ05DNHlMVEV1TnkwdU5DMDNMamt0TGprdE1UTXVPQzB4TGpJdE1UUXVOaTB1TnkweU5DNDNJREl1TXkwek15NHlJRGt1TnkweExqZ2dNUzQzTFRNdU5pQXpMVE11T1NBekxTNHlJREF0TVMweUxqRXRNUzQzTFRRdU5pMHhMak10TkM0MUxUY3VOeTB4TkM0eUxURXhMall0TVRjdU5TMDBMakl0TXk0MkxUSXlMakl0TVRJdE1qZ3VNUzB4TXk0eExUY3VNaTB4TGpNdE1URXVOQzB1TkMweE9DNHhJRE11T1MwekxqWWdNaTR6TFRVdU1pQTBMalV0T1M0eklERXlMamhETXpVdU55QTFOU0F6TXlBMk5TNDJJRE16SURjMkxqbGpNQ0E1TGpFZ01TNDVJREl4TGprZ05DNHpJREk0TGpnZ015NDFJREV3TGpFZ01URXVOU0F4T1M0NUlERTVJREl6TGpRZ05TNDJJREl1TlNBeE5pQXlMallnTWpBdU9TNHhiRE11TlMweExqa3VOeUE0TGpsak1TNHhJREUwTGpNZ05pNDBJRE15TGpjZ01URXVPU0EwUWpoeU0wSTBjRGQ1YUZKWWRVSlhUSEZ6VVRVME5sZFNORE5qY1ZGM2NtSllUVVJHYmtKcE5uWlRTa0psYVdZNGRGQlhPRFZoTjNJM1JFMDVOakZLZG1zMGFHUnllVnB2UW5sRmNEaEhRemhJZW5OeFNuQlNUalJHZUVkTk9TMDVMamtnTUMwdU55MHlMak10TWk0M0xUVXVNaTAwTGpZdE5DNDJMVE11TVMwMkxUTXVOQzB4TWk0eUxUTXVOUzB6TGpndExqRXRPQ0F1TXkwNUxqSXVOeTB5SUM0M0xUSXVOUzR5TFRVdU1pMDFMakV0TXk0MExUWXVOeTAwTGpndE1UTXVPQzAwTGpFdE1qQnNMalV0TkM0eklEVXVPQ0EwWXprdU5TQTJMamNnTVRRdU9DQTRMamdnTWpZdU1pQXhNQzQwSURFdU9DNHlJRElnTGprZ01TNDNJRFl1T0MwdU5TQTRMalV1TkNBNUxqTWdPQzQwSURjdU9DQXhNQzQwTFRFdU9DQTVMamd0TVNBNUxqRXRNVEF1TTJ3dExqVXRPQzR4SURJdU5TQTFMakpqTVM0eklESXVPU0F5TGpnZ05TNHpJRE11TXlBMUxqTnpNaTQyTFRFdU1TQTBMall0TWk0MUlEUXVNeTB5TGpVZ05TMHlMalZqTWk0eklEQWdNUzQyTFRNdU5DMHhMamN0Tnk0NExUSXVPUzAwTFRNdE5DNHlMUzQ1TFRRdU1pQXlMalVnTUNBNExUVXVNU0E0TFRjdU5DQXdMVEV1TXk0MkxURXVOU0F5TGpndExqa2dOQzQ1SURFdU1pQTJMamN1T1NBMkxqY3RNUzR5SURBdE1TNDFMVEV0TWk0eUxUUXVNaTB5TGprdE1pNDBMUzQxTFRRdU15MHhMak10TkM0ekxURXVOeUF3TFM0MUlERXVPQzB4TGpRZ05DNHhMVElnTkM0ekxURXVNeUExTGprdE15NHpJRFF1TVMwMUxqRXRNUzB4TFRFdU55MHVPUzA0TGpjZ01TNDNMVEV1TVM0MUxqRXRMamtnTWk0NExUTWdOQzQyTFRNdU55QTJMakl0Tnk0MUlETXVNUzAzTGpVdE1TNDBJREF0T0M0MUlEUXVOeTA1TGpJZ05pNHhMUzR4TGpNdE1pNDFMalF0TlM0eUxqRXRNaTQ0TFM0eUxUY2dMakV0T1M0MUxqZ3RPQzQ0SURJdU5TMHhOUzQxTFM0NUxUSTFMVEV5TGpZdE5pMDNMalF0T0M0eExUZ3VOeTA1TGpFdE5TNDVMUzQ0SURFdU9TQXpJRGNnTVRFdU1TQXhOUzR4SURRdU9TQTFJRFV1T0NBMkxqUWdOQzQySURjdU1TMHlMamNnTVM0M0xTNDBJRFF1TVNBMUxqUWdOUzQwSURVdU5pQXhMak1nTlM0M0lERXVNeUF6SURJdU5pMHhMall1T1MweUxqVWdNaTR4TFRJdU15QXpMakV1TkNBeExqZ2dNUzQ1SURJZ05TNHpMamNnTVM0NUxTNDRJREV1T0MwdU5pMHVNaUF4TGpjdE1TNHpJREV1TXkweUxqTWdNaTQ1TFRJdU15QXpMalVnTUNBeUxqTWdNeTR4SURJdU1TQTFMamt0TGpJZ015NDRMVE11TXlBMUxqRXRNeTR5SURJZ0xqRXROQzR5SURRdU5DMHhNUzQ0SURjdU5DMHhPUzR4SURjdU5DMDRMamdnTUMweE5DNDVMVEl1TVMweU15NDRMVGd0TVRFdU9DMDNMamt0TVRVdE5pNDNMVEUxSURZZ01DQTNMaklnTWk0NElERTJMalFnTmk0NUlESXlMamtnTkM0eElEWXVOQ0ExTGpnZ055NDRJREV5TGpZZ01UQXVObXcxTGpZZ01pNHpMVE11TWlBeExqRmpMVFF1TlNBeExqWXROeTQ0SURFdU5DMHhOUzR4TFM0NUxUVXVOUzB4TGpjdE55NDBMVEl1T1MweE1pNDFMVGd1TXkwMkxqVXROaTQ0TFRrdU9DMHhNaTQxTFRFekxqRXRNakl1TnkwMUxqUXRNVFl1T0MwMkxqZ3RNek11T1MwekxqSXRNemt1T0NBeExqRXRNUzQ0SURJdE15NDVJREl0TkM0M2N5NDRMVE1nTVM0M0xUVmpNUzR6TFRJdU5pQXhMalF0TXk0NExqVXROQzQzTFRFdU55MHhMamN0TXk0NExqVXROeTR6SURjdU9DMHlMalVnTlM0MExUTXVPQ0EyTGprdE9DNHlJRGt1TkMwNExqZ2dOUzR4TFRFM0xqSWdNeTQyTFRJMUxqTXROQzQxTFRrdU1TMDVMVEV6TGpRdE1qSXVOQzB4TXk0MExUUkNPSEl6UWpSd04zbG9VbGgxUWxkTWNYTlJOVFEyVjFJME0yTnhVWGR5WWxoTlJFWnVRbWsyZGxOS1FtVnBaamgwVUZjNE5XRTNjamRFVFRrMk1VcDJhelJvWkhKNVdtOUNlVVZ3T0VkRE9FaDZjM0ZLY0ZKT05FWjRSMDA1TVRjdU5pQTJMakVnTVRJdU55QTJMalVnTVRZdU55QXhNQzQ0SURJeExqTWdNakl1T1NBekxqVWdPUzR4SURVZ09TNDFJREV4TGpnZ015NDBJREV3TGpjdE9TNDJJREkyTFRFeUxqZ2dORUk0Y2pOQ05IQTNlV2hTV0hWQ1YweHhjMUUxTkRaWFVqUXpZM0ZSZDNKaVdFMUVSbTVDYVRaMlUwcENaV2xtT0hSUVZ6ZzFZVGR5TjBSTk9UWXhTblpyTkdoa2NubGFiMEo1UlhBNFIwTTRTSHB6Y1Vwd1VrNDBSbmhIVFRrekxUUXVNeUEzTGpZZ01TQXhNUzR6SURJdU9TQXhOaTQ0SURndU5pQTRMaklnT0M0MUlEa3VPQ0F4Tnk0NElEWWdNemN1TWkwMExqSWdNakV1TnkwM0xqZ2dNekV0TVRNZ016UXVNUzB6TGpZZ01pNHlMVGN1TlNBeUxqRXRNVEl1TnkwdU1pMHpMalV0TVM0MkxUUXVOQzB4TGpjdE5TNHpMUzQyTFM0NElERXRMallnTVM0NElERXVNU0F6TGpRZ01pNDRJREl1TmlBM0xqUWdNeTQxSURFMExqSWdNaTQ0SURRdU5TMHVOQ0ExTGpZdE1TQTRMamd0TkM0MklEWXVNeTAzTGpFZ01USXVPQzB6TWk0eUlERXpMakV0TlRBdU9TNHlMVEV4TGpndE1TNDRMVEUzTGpJdE9TMHlOQzQxTFRjdU1pMDNMalF0TVRFdE9TMHlNaTR5TFRrdU5DMDFMakl0TGpJdE1UQXVOaTR5TFRFeUlDNDRlbTB0TXk0NElERXlNeTQxWXk0M0lEZ3VPQzB6TGpjZ01USXVNUzA0TGpZZ05pNDBMVEV1T0MweUxqSXRNaTQyTFRRdU15MHlMall0Tnk0eFZqRXpOR2d4TUM0NGJDNDBJRFF1Tm5wdExUY3VOQ0F4T1dNeUxqSWdNeTQwSURJdU15QXpMall1TlNBMExqa3RNU0F1T0MweUxqRWdNUzR4TFRJdU5DNDNMVEV1TWkweExqTXRNaTQ1TFRjdU5DMHlMak10T0M0ekxqa3RNUzQySURFdU9DMHhJRFF1TWlBeUxqZDZiUzB4TWk0NElEa3VNMk11TkNBekxqTXVNaUExTGpRdExqVWdOUzQyTFM0MUxqSXRNaTQxTGpZdE5DNHlMamxzTFRNdU15NDFkaTAwTGpkak1DMDFMalF1TnkwMkxqZ2dNeTQxTFRjdU5TQXpMalF0TGpnZ05DMHVNaUEwTGpVZ05TNHllazB4TkRFdU1TQXhPRFJzTWk0MElERXVPUzAxTGpFdU1XTXROUzQwSURBdE1URXVOQzB4TGpZdE1URXVOQzB6TGpFZ01DMHVOU0F5TGpjdExqa2dOUzQ1TFM0NUlEUXVOQ0F3SURZdU5TNDFJRGd1TWlBeWVpSXZQanh3WVhSb0lHUTlJazB4T1RRdU1pQXpNMk10Tmk0NElESXVPQzB4TXk0M0lERXhMalF0TVRNZ01UWXVNeTQxSURNdU55QTBMakVnTWk0NElEUXVPUzB4TGpFZ01TNDNMVGd1TlNBeE5DNHlMVEUwTGpjZ01UY3VPUzA1SURJZ015NHhJREl1TmlBeU1pNDJJREVnTXpBdU5Hd3RNUzR6SURVdU9TMHhMakl0TldNdE1TNHlMVFV1TmkwMkxqTXRNVFV1TVMwNUxqUXRNVGN1T1MweUxqTXRNaTAxTGpFdE1TNDFMVFV1TVM0NUlEQWdMamtnTVM0eElESXVOaUF5TGpRZ015NDRJRFF1TlNBMElEY3VOU0F4TVM0MUlEZ3VNeUF5TUM0M0xqa2dPUzQzSURJdU1pQXhNQzQ0SURZZ05TNHhJRFF1TkMwMkxqUWdOUzQ0TFRFekxqUWdOUzQzTFRJNExqRWdNQzB4TkMwdU5TMHhOaTR4TFRRdU55MHlNQzQ0TFRJdU1pMHlMalF0Tnk0eUxUSXVPUzB4TVM0MUxURXVNbnB0TFRFeU5DQXhNbU10TXlBeUxqRXROUzR4SURRdU9TMDNMallnTVRBdU1pMDJMamdnTVRRdU5DMDNMamdnTWpFdU9TMDJMaklnTkVJNGNqTkNOSEEzZVdoU1dIVkNWMHh4YzFFMU5EWlhValF6WTNGUmQzSmlXRTFFUm01Q2FUWjJVMHBDWldsbU9IUlFWemcxWVRkeU4wUk5PVFl4U25ack5HaGtjbmxhYjBKNVJYQTRSME00U0hwemNVcHdVazQwUm5oSFRUa2dNUzQzTFM0MklESXVNaTB4TGpZZ01pMHpMakV0TGpZdE5DNDFMVE11TmkwekxqSXRNVEl1TXlBMUxqWXRPQzQ1SURrdE1URXVNU0F4TWk0MUxURTBMakVnTWpFdU9TMHlMaklnTnk0eExUTXVOQ0ExTGpndE15NDBMVE11T0VNMk1DQTJPU0EyT1M0MUlEUkNPSEl6UWpSd04zbG9VbGgxUWxkTWNYTlJOVFEyVjFJME0yTnhVWGR5WWxoTlJFWnVRbWsyZGxOS1FtVnBaamgwVUZjNE5XRTNjamRFVFRrMk1VcDJhelJvWkhKNVdtOUNlVVZ3T0VkRE9FaDZjM0ZLY0ZKT05FWjRSMDA1TXk0eUxUZ3RNeTR5TFRFdU1TQXdMVE11T0NBeExqTXROaTR4SURONmJURXdOUzQxSURJMExqZGpMUzQ0SURFdU5pMHhMamtnTkM0MExUSXVOaUEyTGpNdExqWWdNUzQ1TFRNdU9DQTJMalV0Tnk0eElERXdMakl0TkM0MklEVXVNUzAzTGpNZ055NHhMVEV4TGpNZ09DNDJMVE11TkNBeExqTXROUzR5SURJdU5TMDFMakVnTXk0MklEQWdMamt1TVNBMUxqSXVNaUE1TGpZdU1pQTJMak11TmlBNExqUWdNaTR4SURrdU9TQXlMalVnTWk0MUlEa3VPQ0F6TGpVZ01UVXVOaUF5SURndU9TMHlMak1nTVRBdU5TMDVMalFnTlM0ekxUSTBMalJzTFRJdU5TMDNJREl1T1MwekxqVmpNeTQwTFRRdU1TQTNMamt0TVRRdU5pQTNMakV0TVRZdU5pMHVPQzB5TGpNdE15NHhMVEV1TmkwMExqWWdNUzR6ZW0wdE5TQXpOeTR5WXk0MklEWXRMakVnTnk0eUxUUXVOQ0E0TGpVdE1pNHpMamN0TWk0ekxqWXRNaTR6TFRjdU9TQXdMVGN0TGpNdE9DNDNMVEV1TnkwNUxqSnpMVEV1TWkweElERXVNeTB6YkRJdU9TMHlMak1nTVM0NUlEUXVNbU14SURJdU15QXlJRFl1TnlBeUxqTWdPUzQzZW0wdE1UTXVNaTB6TGpKak1DQXlMamN1TkNBMkxqVXVPQ0E0TGpVdU9TQTBMakV0TGpFZ05DNDVMVEl1T0NBeUxqRXRNUzQwTFRFdU15MHhMalV0TWk0M0xURXROeTQzTGpRdE15NDBMamt0Tmk0MElERXVNaTAyTGprZ01TNHhMVEV1T0NBeExqZ3RMak1nTVM0NElEUjZiUzAxTmk0eExUSTJMalZqTFM0MExqWXRMakVnTVM0MkxqY2dNaTR6TGpndU5pQXpMallnTXk0MElEWXVNaUEyTGpKc05DNDVJRFV0TVM0MUlEUXVOV010TGprZ01pNDBMVEV1T0NBNUxqWXRNaTR5SURFMUxqbHNMUzQ0SURFeExqWWdNaTQ1SURJdU1tTXlMalFnTVM0NUlETXVOeUF5TGpJZ055NHpJREV1TnlBMkxqUXRMamtnTVRFdU1pMHpMallnTVRNdU15MDNMallnTVM0MkxUSXVPQ0F4TGpndE5DNDRJREV1TkMweE1DNHpMUzQyTFRZdU1TMHVOUzAyTGpjZ01TNHpMVFl1TnlBeUxqTWdNQ0F6TGpVdE1pNDFJREV1T0MwekxqZ3RMamN0TGpVdE15NHlMVEV1TWkwMUxqWXRNUzQyTFRZdU5TMHhMVGd1T0MweUxqWXRNVGN1TlMweE1pMDNMall0T0M0eUxURXdMall0TVRBdE1USXVNaTAzTGpSNmJUSTNMalFnTXpJdU1XTXVNaUEwTGpjZ01DQTNMamN0TGpjZ09DNHhMUzQzTGpVdE1TNHhMVEV0TVM0eExUUXVOaUF3TFRJdU9TMHVNeTAyTGpNdExqWXROeTQyTFM0M0xUSXVOQzB6TGpNdE1pNDVMVFV1TWkweExURXVOaUF4TGpZdE1TNDFJREV3TGpjdU1pQXhOQ0F4TGpZZ015NHhMamNnTXk0NExUUXVOaUF6TGpob0xUTXVNV3d1TmkweE1TNHpZeTQ1TFRFMkxqWXVOaTB4Tmk0eElEZ3RNVEl1TVd3MkxqRWdNeTR5TGpRZ055NDFlaUl2UGp4eVpXTjBJSGRwWkhSb1BTSXhNREFsSWlCb1pXbG5hSFE5SWpFd01DVWlJR1pwYkd3OUltNXZibVVpSUhOMGNtOXJaVDBpSXpBd01DSWdjM1J5YjJ0bExYZHBaSFJvUFNJeE1DSXZQanh5WldOMElIZHBaSFJvUFNJNU1DVWlJR2hsYVdkb2REMGlNekFpSUhnOUlqVWxJaUI1UFNJeU1DVWlJR1pwYkd3OUlpTm1abVlpTHo0OGRHVjRkQ0I0UFNJMU1DVWlJSGs5SWpJNEpTSWdZMnhoYzNNOUluQnlaV1pwZUY5ZlltRnpaU0lnWkc5dGFXNWhiblF0WW1GelpXeHBibVU5SW0xcFpHUnNaU0lnZEdWNGRDMWhibU5vYjNJOUltMXBaR1JzWlNJK0NpQWdJQ0JVZFdKaGFXNWhJRTF2Y1hWbFkyRWdUV0Z5WVdOMWFtRUtJQ0E4TDNSbGVIUStQQzl6ZG1jKyIKfQ==");
-        console.log("Um NFT com o ID %s foi mintado para %s", newItemId, msg.sender);
+      string memory finalSvg = string(abi.encodePacked(baseSvg, combinedWord, "</text></svg>"));
 
-        // Incrementa o contador para quando o próximo NFT for mintado.
-        _tokenIds.increment();
+      // pego todos os metadados de JSON e codifico com base64.
+      string memory json = Base64.encode(
+        bytes(
+          string(
+            abi.encodePacked(
+              '{"name": "',
+              // Definimos aqui o titulo do nosso NFT sendo a combinacao de palavras.
+              combinedWord,
+              '", "description": "Uma colecao aclamada e famosa de NFTs de um Rato Louco.", "image": "data:image/svg+xml;base64,',
+              // Adicionamos data:image/svg+xml;base64 e acrescentamos nosso svg codificado com base64.
+              Base64.encode(bytes(finalSvg)),
+              '"}'
+            )
+          )
+        )
+      );
+
+      // Assim como antes, prefixamos com data:application/json;base64
+      string memory finalTokenUri = string(
+        abi.encodePacked("data:application/json;base64,", json)
+      );
+
+      // Minta ("cunha") o NFT para o sender (quem ativa o contrato) usando msg.sender.
+      _safeMint(msg.sender, newItemId);
+
+      // Vamos definir essa tokenURI depois!
+      _setTokenURI(newItemId, finalTokenUri);
+
+      // Incrementa o contador para quando o próximo NFT for mintado.
+      _tokenIds.increment();
+      console.log("Um NFT com ID %s foi cunhado para %s", newItemId, msg.sender);
+
+      emit NewEpicNFTMinted(msg.sender, newItemId);
     }
 }
